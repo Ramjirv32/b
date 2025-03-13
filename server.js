@@ -16,6 +16,7 @@ const secret = process.env.JWT_SECRET;
 // Fix trailing slash in allowed origin
 const allowedOrigins = [
   'http://societycis.org',
+  'http://localhost:5173',
    // Removed trailing slash
   
 ];
