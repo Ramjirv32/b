@@ -14,12 +14,6 @@ const PORT = process.env.PORT || 5000;
 const secret = process.env.JWT_SECRET;
 app.use(cors('https://societycis.org'));
 // Fix CORS configuration - REMOVE DUPLICATE CORS CONFIGURATION
-const allowedOrigins = [
- 
-  'https://cyber-web.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000'
-];
 
 // Use ONE cors configuration, not multiple
 app.use(cors({
