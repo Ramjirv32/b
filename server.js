@@ -16,11 +16,10 @@ const secret = process.env.JWT_SECRET;
 // Fix trailing slash in allowed origin
 const allowedOrigins = [
   'http://societycis.org',
+  'https://cyber-web.vercel.app', // No trailing slash
   'http://localhost:5173',
-   // Removed trailing slash
-  
+  'http://localhost:3000'
 ];
-app.use(cors('http://societycis.org/'));
 
 app.use(cors({
   origin: function(origin, callback) {
