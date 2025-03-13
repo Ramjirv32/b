@@ -105,11 +105,10 @@ const sendVerificationEmail = async (email, token) => {
         html: `
             <h2>Thank you for registering!</h2>
             <p>Please verify your email by clicking on the link below:</p>
-            <a href="${process.env.FRONTEND_URL}/login/${token}">Verify Email</a>
+            <a href="${process.env.FRONTEND_URL}/verify-email?token=${token}">Verify Email</a>
             <p>This link will expire in 24 hours.</p>
         `
     };
-
     return transporter.sendMail(mailOptions);
 };
 
