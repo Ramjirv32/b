@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const secret = process.env.JWT_SECRET;
-
+app.use(cors('http://lsocietycis.org'));
 // Fix trailing slash in allowed origin
 const allowedOrigins = [
   'http://societycis.org',
