@@ -13,16 +13,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const secret = process.env.JWT_SECRET;
 
-// Fix trailing slash in allowed origin
 const allowedOrigins = [
   'http://societycis.org',
-  'https://cyber-web.vercel.app', // No trailing slash
+  'https://cyber-web.vercel.app/',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
+   
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) === -1) {
@@ -37,24 +37,24 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+
 app.options('*', cors());
 
-// Only connect to MongoDB if not already connected
-if (mongoose.connection.readyState === 0) {
-  mongoose.connect(process.env.MONGODB_URI)
-      .then(() => {
-          console.log("MongoDB Atlas Connected Successfully");
-      })
-      .catch(err => {
-          console.error("MongoDB Connection Error:", err.message);
-          // Don't exit in serverless environment
-          if (!process.env.VERCEL) {
-              process.exit(1);
-          }
-      });
-}
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => {
+        console.log("MongoDB Atlas Connected Successfully to database 'cyber'");
+    })
+    .catch(err => {
+        console.error("MongoDB Connection Error Details:", {
+            message: err.message,
+            code: err.code,
+            name: err.name,
+            stack: err.stack
+        });
+        process.exit(1);
+    });
 
-// Use mongoose.models to prevent model recompilation errors in serverless environment
 const userSchema = new mongoose.Schema({
     username: String,
     email: { type: String, required: true, unique: true },
@@ -66,8 +66,8 @@ const userSchema = new mongoose.Schema({
     resetOTP: String,
     resetOTPExpires: Date
 });
-
-const User = mongoose.models.User || mongoose.model("User", userSchema);
+// d
+const User = mongoose.model("User", userSchema);
 
 const newsletterSchema = new mongoose.Schema({
     firstName: { type: String, required: true },
@@ -79,7 +79,7 @@ const newsletterSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true }
 });
 
-const Newsletter = mongoose.models.Newsletter || mongoose.model("Newsletter", newsletterSchema);
+const Newsletter = mongoose.model("Newsletter", newsletterSchema);
 
 const membershipSchema = new mongoose.Schema({
   title: String,
@@ -105,7 +105,7 @@ const membershipSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const Membership = mongoose.models.Membership || mongoose.model("Membership", membershipSchema);
+const Membership = mongoose.model("Membership", membershipSchema);
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -123,7 +123,7 @@ const sendVerificationEmail = async (email, token) => {
         html: `
             <h2>Thank you for registering!</h2>
             <p>Please verify your email by clicking on the link below:</p>
-            <a href="${process.env.FRONTEND_URL}/login/${token}">Verify Email</a>
+            <a href="${process.env.FRONTEND_URL}/login?token=${token}">Verify Email</a>
             <p>This link will expire in 24 hours.</p>
         `
     };
@@ -557,12 +557,6 @@ app.post('/api/membership/payment', async (req, res) => {
   }
 });
 
-// Conditional server start for local development
-if (!process.env.VERCEL) {
-    app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-    });
-}
-
-// Export the Express app for Vercel
-export default app;
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
