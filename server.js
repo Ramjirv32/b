@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const secret = process.env.JWT_SECRET;
 
-// Simplified CORS configuration - allow all origins
+
 app.use(cors({
   origin: "*", // Allow all origins
 
