@@ -206,35 +206,50 @@ app.post("/login", async (req, res) => {
 app.post('/signin', async (req, res) => {
     const { email, password } = req.body;
     try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ success: false, message: "User already exists" });
-        }
+        // Add timeout handling
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
+        });
 
-        const hash = await bcrypt.hash(password, 10);
-        const verificationToken = crypto.randomBytes(20).toString('hex');
-        
-        const newUser = new User({
-            email,
-            password: hash,
-            isVerified: false,
-            verificationToken
-        });
-        
-        await newUser.save();
-        await sendVerificationEmail(email, verificationToken);
-        
-        const token = jwt.sign({ email }, secret, { expiresIn: '1h' });
-        return res.status(201).json({
-            success: true,
-            token,
-            message: "Account created. Please check your email to verify your account."
-        });
+        const registrationPromise = (async () => {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "User already exists" 
+                });
+            }
+
+            const hash = await bcrypt.hash(password, 10);
+            const verificationToken = crypto.randomBytes(20).toString('hex');
+            
+            const newUser = new User({
+                email,
+                password: hash,
+                isVerified: false,
+                verificationToken
+            });
+            
+            await newUser.save();
+            await sendVerificationEmail(email, verificationToken);
+            
+            return res.status(201).json({
+                success: true,
+                token: jwt.sign({ email }, secret, { expiresIn: '1h' }),
+                message: "Account created. Please check your email to verify your account."
+            });
+        })();
+
+        await Promise.race([registrationPromise, timeoutPromise]);
     } catch (error) {
         console.error("Signin error:", error);
-        return res.status(500).json({ 
+        
+        // Send proper JSON response for all error cases
+        return res.status(error.message === 'Request timeout' ? 504 : 500).json({ 
             success: false, 
-            message: "An error occurred during registration",
+            message: error.message === 'Request timeout' 
+                ? "Request timed out. Please try again." 
+                : "An error occurred during registration",
             error: error.message 
         });
     }
