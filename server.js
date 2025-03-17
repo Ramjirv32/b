@@ -244,7 +244,7 @@ app.post('/signin', async (req, res) => {
     } catch (error) {
         console.error("Signin error:", error);
         
-        // Send proper JSON response for all error cases
+      
         return res.status(error.message === 'Request timeout' ? 504 : 500).json({ 
             success: false, 
             message: error.message === 'Request timeout' 
