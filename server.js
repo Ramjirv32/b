@@ -62,6 +62,7 @@ const newsletterSchema = new mongoose.Schema({
 
 const Newsletter = mongoose.models.Newsletter || mongoose.model("Newsletter", newsletterSchema);
 
+// Update the membershipSchema to include profilePhoto and membershipId
 const membershipSchema = new mongoose.Schema({
   title: String,
   firstName: { type: String, required: true },
@@ -83,6 +84,10 @@ const membershipSchema = new mongoose.Schema({
   researchGate: String,
   paymentStatus: { type: String, default: 'pending' },
   membershipFee: String,
+  profilePhoto: { type: String }, // Base64 encoded image
+  membershipId: { type: String },
+  issueDate: { type: Date },
+  expiryDate: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -126,7 +131,7 @@ const sendOTPEmail = async (email, otp) => {
     return transporter.sendMail(mailOptions);
 };
 
-const sendMembershipConfirmationEmail = async (email, firstName, lastName) => {
+const sendMembershipConfirmationEmail = async (email, firstName, lastName, membershipId, issueDate, expiryDate) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -139,16 +144,17 @@ const sendMembershipConfirmationEmail = async (email, firstName, lastName) => {
         <p>Thank you for becoming a member of Cyber Intelligent System. Your membership has been confirmed!</p>
         
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="color: #2d3436;">Member Benefits:</h3>
+          <h3 style="color: #2d3436;">Your Membership Details:</h3>
           <ul>
-            <li>Access to exclusive resources</li>
-            <li>Network with industry professionals</li>
-            <li>Participate in special events</li>
-            <li>Regular updates on latest developments</li>
+            <li><strong>Membership ID:</strong> ${membershipId}</li>
+            <li><strong>Issue Date:</strong> ${issueDate}</li>
+            <li><strong>Expiry Date:</strong> ${expiryDate}</li>
+            <li><strong>Position:</strong> Member</li>
           </ul>
         </div>
         
         <p>Your membership is now active. You can access your member benefits by logging into our portal.</p>
+        <p>You can view your membership card at: <a href="${process.env.FRONTEND_URL}/id-card/${membershipId}">View Membership Card</a></p>
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dfe6e9;">
           <p style="font-size: 0.8em; color: #636e72;">
@@ -502,23 +508,42 @@ app.post('/api/unsubscribe', async (req, res) => {
     }
 });
 
+// Update the /api/membership endpoint to include ID generation
 app.post('/api/membership', async (req, res) => {
   try {
     const membership = new Membership(req.body);
-    membership.paymentStatus = 'completed'; 
+    membership.paymentStatus = 'completed';
+    
+    // Generate a unique membership ID
+    const count = await Membership.countDocuments();
+    const membershipId = `CIS${new Date().getFullYear()}${(count + 1).toString().padStart(4, '0')}`;
+    membership.membershipId = membershipId;
+    
+    // Set issue date and expiry date
+    const issueDate = new Date();
+    const expiryDate = new Date();
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    
+    membership.issueDate = issueDate;
+    membership.expiryDate = expiryDate;
+    
     await membership.save();
 
-    
+    // Update the sendMembershipConfirmationEmail to include ID card info
     await sendMembershipConfirmationEmail(
       membership.email,
       membership.firstName,
-      membership.lastName
+      membership.lastName,
+      membershipId,
+      issueDate.toLocaleDateString(),
+      expiryDate.toLocaleDateString()
     );
 
     res.status(201).json({ 
       success: true, 
       message: "Membership confirmed! Please check your email for confirmation.",
-      membershipId: membership._id 
+      membershipId: membershipId,
+      membership: membership
     });
   } catch (error) {
     res.status(500).json({ 
@@ -528,7 +553,6 @@ app.post('/api/membership', async (req, res) => {
     });
   }
 });
-
 
 app.post('/api/membership/payment', async (req, res) => {
   const { membershipId, paymentStatus } = req.body;
@@ -578,6 +602,39 @@ app.get('/api/membership/check/:email', async (req, res) => {
     res.status(500).json({ 
       error: 'Error checking membership status', 
       message: error.message 
+    });
+  }
+});
+
+app.get('/api/membership/:id', async (req, res) => {
+  try {
+    const membershipId = req.params.id;
+    const membership = await Membership.findOne({ membershipId });
+    
+    if (!membership) {
+      return res.status(404).json({
+        success: false,
+        message: "Membership not found"
+      });
+    }
+    
+    res.json({
+      success: true,
+      membership: {
+        name: `${membership.firstName} ${membership.lastName}`,
+        position: membership.currentPosition || "Member",
+        idNumber: membership.membershipId,
+        issueDate: new Date(membership.issueDate).toLocaleDateString(),
+        expiryDate: new Date(membership.expiryDate).toLocaleDateString(),
+        department: membership.department || "CYBER OPERATIONS",
+        photoUrl: membership.profilePhoto
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching membership",
+      error: error.message
     });
   }
 });
