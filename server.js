@@ -36,7 +36,6 @@ if (mongoose.connection.readyState === 0) {
       });
 }
 
-// Use mongoose.models to prevent model recompilation errors in serverless environment
 const userSchema = new mongoose.Schema({
     username: String,
     email: { type: String, required: true, unique: true },
