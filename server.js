@@ -552,6 +552,36 @@ app.post('/api/membership/payment', async (req, res) => {
   }
 });
 
+app.get('/api/membership/check/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const membership = await Membership.findOne({ email });
+    
+    if (!membership) {
+      return res.json({ isMember: false });
+    }
+    
+    // Check if membership is within 1 year
+    const creationDate = new Date(membership.createdAt);
+    const expiryDate = new Date(creationDate);
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Add 1 year
+    
+    const isActive = new Date() < expiryDate;
+    
+    return res.json({ 
+      isMember: isActive,
+      expiryDate: expiryDate,
+      status: isActive ? 'active' : 'expired'
+    });
+  } catch (error) {
+    console.error('Error checking membership:', error);
+    res.status(500).json({ 
+      error: 'Error checking membership status', 
+      message: error.message 
+    });
+  }
+});
+
 // Conditional server start for local development
 if (!process.env.VERCEL) {
     app.listen(PORT, () => {
