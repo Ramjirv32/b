@@ -641,6 +641,40 @@ app.get('/api/membership/:id', async (req, res) => {
   }
 });
 
+// Add this endpoint after your existing /api/membership/:id endpoint
+app.get('/api/membership/email/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const membership = await Membership.findOne({ email });
+    
+    if (!membership) {
+      return res.status(404).json({
+        success: false,
+        message: "Membership not found"
+      });
+    }
+    
+    res.json({
+      success: true,
+      membership: {
+        name: `${membership.firstName} ${membership.lastName}`,
+        position: membership.currentPosition || "Member",
+        idNumber: membership.membershipId,
+        issueDate: new Date(membership.issueDate).toLocaleDateString(),
+        expiryDate: new Date(membership.expiryDate).toLocaleDateString(),
+        department: membership.department || "CYBER OPERATIONS",
+        photoUrl: membership.profilePhoto
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching membership",
+      error: error.message
+    });
+  }
+});
+
 // Conditional server start for local development
 if (!process.env.VERCEL) {
     app.listen(PORT, () => {
