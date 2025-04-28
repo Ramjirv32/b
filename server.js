@@ -645,7 +645,11 @@ app.get('/api/membership/:id', async (req, res) => {
 app.get('/api/membership/email/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    const membership = await Membership.findOne({ email });
+    console.log("Looking up membership for email:", email);
+    
+    const membership = await Membership.findOne({ email: email });
+    
+    console.log("Found membership:", membership ? "yes" : "no");
     
     if (!membership) {
       return res.status(404).json({
@@ -660,19 +664,29 @@ app.get('/api/membership/email/:email', async (req, res) => {
         name: `${membership.firstName} ${membership.lastName}`,
         position: membership.currentPosition || "Member",
         idNumber: membership.membershipId,
-        issueDate: new Date(membership.issueDate).toLocaleDateString(),
-        expiryDate: new Date(membership.expiryDate).toLocaleDateString(),
+        issueDate: membership.issueDate ? new Date(membership.issueDate).toLocaleDateString() : "N/A",
+        expiryDate: membership.expiryDate ? new Date(membership.expiryDate).toLocaleDateString() : "N/A",
         department: membership.department || "CYBER OPERATIONS",
         photoUrl: membership.profilePhoto
       }
     });
   } catch (error) {
+    console.error("Error in /api/membership/email/:email", error);
     res.status(500).json({
       success: false,
       message: "Error fetching membership",
       error: error.message
     });
   }
+});
+
+// Add this test endpoint to verify API access
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: "API is working correctly",
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Conditional server start for local development
